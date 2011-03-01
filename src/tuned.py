@@ -1,11 +1,15 @@
 from __future__ import division
 from brian import *
-from numpy import linspace
+import numpy as np
+import scipy as sp
 
 # Input
 dt = 1
 T  = 1000
+N  = 100
 
+mu = np.linspace(0,np.pi,N)
+#mu = np.random.rand(N)*np.pi
 
 # Parameters
 Cm  = 1*ufarad
@@ -33,7 +37,7 @@ Iext : uA
 ''')
 
 # The network
-P=NeuronGroup(N         = 1,
+P=NeuronGroup(N,
               model     = eqs,
               threshold = EmpiricalThreshold(threshold=-20*mV, refractory=2*ms),
               implicit  = True,
@@ -43,29 +47,26 @@ P=NeuronGroup(N         = 1,
 P.v    = EL*mV
 P.Iext = 0*uA
 
-tau_ref  = 2*ms
-tau_rc   = 20*ms
-min_resp = 10*Hz
-max_resp = 100*Hz
-J_bias   = 1/(1 - exp((tau_ref*min_resp - 1)/(tau_rc*min_resp)))
-alpha    = 1/(1 - exp((tau_ref*max_resp - 1)/(tau_rc*max_resp))) - J_bias
-
-x = zeros(1000)
-x[200:700] = linspace(0,2,500)
-x[700:900] = linspace(-1,0,200)
+#tau_ref  = 2*ms
+#tau_rc   = 20*ms
+#min_resp = 10*Hz
+#max_resp = 100*Hz
+#J_bias   = 1/(1 - exp((tau_ref*min_resp - 1)/(tau_rc*min_resp)))
+#alpha    = 1/(1 - exp((tau_ref*max_resp - 1)/(tau_rc*max_resp))) - J_bias
 
 myclock = Clock(dt=1*ms)
 @network_operation(myclock, when='start')
 def updateInput(clock):
   index  = int(clock.t/clock.dt)
-  P.Iext = alpha*x[index]*uA + J_bias*uA
-    
+  #P.Iext = alpha*x[index]*uA + J_bias*uA
+  P.Iext = sp.stats.vonmises.pdf(np.pi/2-mu,2)*uA
+  
 # Record a few trace
-trace  = StateMonitor(P, 'v', record=[0])
+trace  = StateMonitor(P, 'v', record=[49])
 spikes = SpikeMonitor(P)
 run(1000*msecond)
 raster_plot(spikes)
-plot(trace.times/ms,trace[0]/mV)
-plot(-95+5*x)
+plot(trace.times/ms,trace[49]/mV)
+#plot(-95+5*x)
 ylabel('Membrane Potential (mV)')
 show()

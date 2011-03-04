@@ -1,44 +1,47 @@
+from __future__ import division
 import numpy as np
 import pylab as py
 
 ## setup parameters and state variables
-T      = 100                      # total time to simulate (msec)
-dt     = 0.125                   # simulation time step (msec)
-time   = np.arange(0, T+dt, dt)  # time array
-N      = 20                      # number of neurons
+N    = 10                      # number of neurons
+T    = 200                     # total time to simulate (msec)
+dt   = 0.125                   # simulation time step (msec)
+time = np.arange(0, T+dt, dt)  # time array
 
 
 ## LIF properties
 Vm      = np.zeros([N,len(time)])  # potential (V) trace over time
-tau_m   = 10                    # time constant (msec)
+tau_m   = 10                       # time constant (msec)
 tau_ref = 4                        # refractory period (msec)
 tau_psc = 5                        # post synaptic current filter time constant
 Vth     = 1                        # spike threshold (V)
 
-## Input stimulus
-Iext = np.zeros(N)
+## Currents
+I    = np.zeros((N,len(time)))
+Iext = np.zeros(N) # externally applied stimulus
 Iext[0] = 1.5
 
+## Synapse weight matrix
+# equally weighted ring connectivity
 synapses = np.eye(N)
 synapses = np.roll(synapses, 1, 0)
 
-#synapses = np.random.rand(N,N)
+# randomly weighted full connectivity
+#synapses = np.random.rand(N,N)*0.3
 
-last_spike = np.zeros(N)             # initial refractory time
-raster = np.zeros([N,len(time)])*np.nan
-
-def syncurrent(t):
-    if t < 0:
-        t = 0
+## Synapse current model
+def Isyn(t):
+    '''t is an array of times since each neuron's last spike event'''
+    rectify = np.nonzero(t < 0)
+    t[rectify] = 0
     return t*np.exp(-t/tau_psc)
-Isyn = np.vectorize(syncurrent)
+last_spike = np.zeros(N) - tau_ref
 
-I = np.zeros((N,len(time)))
-## iterate over each time step
+## Simulate network
+raster = np.zeros([N,len(time)])*np.nan
 for i, t in enumerate(time):
     if i == 0:
         continue
-
     active = np.nonzero(t > last_spike + tau_ref)
     Vm[active,i] = Vm[active,i-1] + (-Vm[active,i-1] + I[active,i-1]) / tau_m * dt
 
@@ -48,10 +51,9 @@ for i, t in enumerate(time):
     I[:,i] = Iext + synapses.dot(Isyn(t - last_spike))
 
 ## plot membrane potential trace
-#py.plot(time, np.transpose(Vm))
 py.plot(time, np.transpose(raster), 'b.')
-#py.plot(time,np.transpose(I))
-py.title('Leaky Integrate-and-Fire Example')
-py.ylabel('Membrane Potential (V)')
+py.title('Recurrent Network Example')
+py.ylabel('Neuron')
 py.xlabel('Time (msec)')
+py.ylim([0.75,N+0.25])
 py.show()

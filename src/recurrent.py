@@ -24,7 +24,7 @@ Iext[0] = 1.5
 ## Synapse weight matrix
 # equally weighted ring connectivity
 synapses = np.eye(N)
-synapses = np.roll(synapses, 1, 0)
+synapses = np.roll(synapses, -1, 1)
 
 # randomly weighted full connectivity
 #synapses = np.random.rand(N,N)*0.3
@@ -32,16 +32,13 @@ synapses = np.roll(synapses, 1, 0)
 ## Synapse current model
 def Isyn(t):
     '''t is an array of times since each neuron's last spike event'''
-    rectify = np.nonzero(t < 0)
-    t[rectify] = 0
+    t[np.nonzero(t < 0)] = 0
     return t*np.exp(-t/tau_psc)
 last_spike = np.zeros(N) - tau_ref
 
 ## Simulate network
 raster = np.zeros([N,len(time)])*np.nan
-for i, t in enumerate(time):
-    if i == 0:
-        continue
+for i, t in enumerate(time[1:],1):
     active = np.nonzero(t > last_spike + tau_ref)
     Vm[active,i] = Vm[active,i-1] + (-Vm[active,i-1] + I[active,i-1]) / tau_m * dt
 
